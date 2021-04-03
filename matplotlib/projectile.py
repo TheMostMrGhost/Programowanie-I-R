@@ -10,38 +10,45 @@ def wczytajWartości():
     wynik.update({"kąt" : float(input("Podaj kąt (liczony od osi OX):\n"))})
     return  wynik
 #======================================
-def liczX(V0, B, m, ile, interwał):
-    for ii in range(ile):
-        V0 = V0 - B*V0*V0*interwał/m
-        yield V0
-#======================================
-def liczY(V0, B, m, ile, interwał):
-    for ii in range(ile):
-        V0 = V0 - np.sign(V0)*B*V0*V0*interwał/m - 9.81*interwał
-        yield V0
+def droga(dane,ile, interwał):
+    def liczX(V0, B, m, ile, interwał):
+        for ii in range(ile):
+            print(V0)
+            V0 = V0 - B*V0*V0*interwał/m
+            yield V0
+
+    def liczY(V0, B, m, ile, interwał):
+        for ii in range(ile):
+            V0 = V0 - np.sign(V0)*B*V0*V0*interwał/m - 9.81*interwał
+            yield V0
+
+    szybkoscWPionie = dane["początkowa"]*math.sin( math.radians(dane["kąt"])  )
+    szybkoscWPoziomie = np.abs(dane["początkowa"]*math.cos( math.radians( dane["kąt"])) )
+
+    print("Szybkość w pionie: {0}\n".format(szybkoscWPionie))
+    print("Szybkość w poziomie: {0}\n".format(szybkoscWPoziomie))
+    wynikX = list(liczX(szybkoscWPoziomie, dane["współczynnik"], dane["masa"], ile, interwał))
+    wynikY = list(liczY(szybkoscWPionie, dane["współczynnik"], dane["masa"], ile, interwał))
+
+    wysokości = [dane["wysokość"]]
+    odległości = [0]
+    ii = 1
+    while wysokości[ii-1]>=0:
+        wysokości.append(wysokości[ii-1] + wynikY[ii-1]*interwał)
+        odległości.append(odległości[ii-1] + wynikX[ii-1]*interwał)
+        ii+=1
+    return wysokości, odległości
 #======================================
 #Część główna programu
 #======================================
-INTERWAŁ = 0.1
+INTERWAŁ = 0.01
 dane = wczytajWartości()
 ile = int(input())
-szybkoscWPionie = dane["początkowa"]*math.sin( math.radians(dane["kąt"])  )
-szybkoscWPoziomie = np.abs(dane["początkowa"]*math.cos( math.radians( dane["kąt"])) )
 
-wynikX = list(liczX(szybkoscWPoziomie, dane["współczynnik"], dane["masa"], ile, INTERWAŁ))
+wysokości, odległości = droga(dane, ile,INTERWAŁ)
+for ii in range(len(wysokości)):
+    print("{0}   {1}".format(wysokości[ii], odległości[ii]))
 
-wynikY = list(liczY(szybkoscWPionie, dane["współczynnik"], dane["masa"], ile, INTERWAŁ))
-
-
-baza = np.arange(0, ile*INTERWAŁ , INTERWAŁ)
-
-figX, axX = plt.subplots()
-axX.plot(baza, wynikX)
-
-figY, axY = plt.subplots()
-axY.plot(baza,wynikY)
-
-wartosci = [np.sqrt(wynikX[ii]**2 + wynikY[ii]**2) for ii in range(ile)]
 fig, ax = plt.subplots()
-ax.plot(baza, wartosci)
+ax.plot(odległości, wysokości)
 plt.show()
