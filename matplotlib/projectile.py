@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt, math, numpy as np, matplotlib.animation as animation
+
 def dajInterwał():
-    return 0.02
+    return 0.01
 #======================================
 def wczytajWartości():
     print("Witaj w programie wizualizującym ruch punktu materialnego w rzucie ukośnym")
@@ -12,8 +13,7 @@ def wczytajWartości():
     wynik.update({"kąt" : int(input("Podaj kąt (liczony od osi OX):\n"))})
     return  wynik
 #======================================
-def trajektoria(dane):
-    interwał = dajInterwał()
+def trajektoria(dane,interwał = dajInterwał()):
     masa = dane["masa"]
     wysokość = dane["wysokość"]
     opór = dane["współczynnik"]
@@ -31,35 +31,6 @@ def trajektoria(dane):
         ii += 1
     return wysokości, odległości
 #======================================
-def droga(dane,ile):
-    interwał = interwał()
-    def liczX(V0, B, m, ile, interwał):
-        for ii in range(ile):
-            print(V0)
-            V0 = V0 - B*V0*V0*interwał/m
-            yield V0
-
-    def liczY(V0, B, m, ile, interwał):
-        for ii in range(ile):
-            V0 = V0 - np.sign(V0)*B*V0*V0*interwał/m - 9.81*interwał
-            yield V0
-
-    szybkoscWPionie = dane["początkowa"]*math.sin( math.radians(dane["kąt"])  )
-    szybkoscWPoziomie = np.abs(dane["początkowa"]*math.cos( math.radians( dane["kąt"])) )
-    print("Szybkość w pionie: {0}\n".format(szybkoscWPionie))
-    print("Szybkość w poziomie: {0}\n".format(szybkoscWPoziomie))
-    wynikX = list(liczX(szybkoscWPoziomie, dane["współczynnik"], dane["masa"], ile, interwał))
-    wynikY = list(liczY(szybkoscWPionie, dane["współczynnik"], dane["masa"], ile, interwał))
-
-    wysokości = [dane["wysokość"]]
-    odległości = [0]
-    ii = 1
-    while wysokości[ii-1]>=0:
-        wysokości.append(wysokości[ii-1] + wynikY[ii-1]*interwał)
-        odległości.append(odległości[ii-1] + wynikX[ii-1]*interwał)
-        ii+=1
-    return wysokości, odległości
-#======================================
 def szukajMaksa(dane):#Ta funkcja jest po to żeby móc ładnie ustawić zakres na Y
     maks = - np.inf
     for ii in dane:
@@ -67,21 +38,41 @@ def szukajMaksa(dane):#Ta funkcja jest po to żeby móc ładnie ustawić zakres 
             maks = ii
     return maks
 #======================================
+def szukajOptymalnegoPrzedziału(dane):
+    optymalny = dajInterwał()
+    wysokości, odległości = trajektoria(dane)
+    for ii in range(10):
+        wysokości, odległości = trajektoria(dane,optymalny)
+        if(len(wysokości)<400):
+            optymalny /=2
+        elif(len(wysokości)>800):
+            optymalny *=2
+        else:
+            return optymalny
+    return optymalny
+#======================================
+def przygotujWykres(wysMaks, odlMaks):
+    ax.set_xlim(0, 11*odlMaks/10)
+    ax.set_ylim(0,11*wysMaks/10)
+    ax.set_xlabel("Odległość [m]", fontsize = 15)
+    ax.set_ylabel("Wysokość [m]", fontsize = 15)
+    ax.set_title(r"Rzut ukośny ciała z oporem $\sim V^2$", fontsize = 20)
+    wykres = plt.get_current_fig_manager()
+    wykres.window.showMaximized()
+#======================================
 #Część główna programu
 #======================================
-INTERWAŁ = dajInterwał() #Ogarnąć czy ten interwał można dawać jakiś większy czy zawsze taki
 dane = wczytajWartości()
+INTERWAŁ = szukajOptymalnegoPrzedziału(dane)
+wysokości, odległości = trajektoria(dane, INTERWAŁ)
 
-wysokości, odległości = trajektoria(dane)
+hmax = szukajMaksa(wysokości)
 
 fig, ax = plt.subplots(tight_layout = True)
-ax.set_xlim(0, 11*odległości[-1]/10)
-ax.set_ylim(0,11*szukajMaksa(wysokości)/10)
-
 obj, = ax.plot([],[],'g', markersize = 3)
-obj2, = ax.plot([],[], 'r.')
-wykres = plt.get_current_fig_manager()
-wykres.window.showMaximized()
+obj2, = ax.plot([],[], 'ro', markersize = 10)
+czas = ax.annotate(0, xy=(1, 1), xytext=( odległości[1],wysokości[-10]))
+
 xdata = []
 ydata = []
 
@@ -90,7 +81,11 @@ def dajDane(i):
     ydata.append(wysokości[i])
     obj.set_data(xdata,ydata)
     obj2.set_data(odległości[i],wysokości[i])
-    return obj, obj2
+    licznik = i*INTERWAŁ
+    licznik = round(licznik, -int(np.log10(INTERWAŁ)))
+    czas.set_text("Czas spadku [s]:\n      " + str(licznik))
+    return obj, obj2, czas
 
-ani = animation.FuncAnimation(fig,dajDane,len(wysokości),interval = 20/len(wysokości), blit = True, repeat = False)
+
+ani = animation.FuncAnimation(fig,dajDane,len(wysokości),interval = 20/len(wysokości), blit = True, repeat = False, init_func =przygotujWykres(hmax,odległości[-1]))
 plt.show()
