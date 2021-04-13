@@ -1,23 +1,45 @@
 def main():
-    def check(otwierające, zamykające):
+    def check(słowo):
         pasujace = {
-            '(':')',
-            '[':']',
-            '{':'}'
+           ')':'(',
+            ']':'[',
+            '}':'{'
         }
-        if len(otwierające) != len(zamykające):
+        stos = []
+        czyjJestGit = True
+        for ii in range(len(słowo)):
+            if słowo[ii] in ['(','{','[']:
+                stos.append(słowo[ii])
+            elif słowo[ii] in [')','}',']']:
+                if stos.pop(-1) != pasujace.get(słowo[ii]):
+                    czyjJestGit = False
+                    break
+        if czyjJestGit:
+            print("Ciąg nawiasów jest zbalansowany")
+        else:
             print("Ciąg nawiasów nie jest zbalansowany")
-            return
-        while len(otwierające) != 0 :
-            otw = otwierające.pop(len(otwierające)-1)
-            zam = zamykające.pop(len(zamykające)-1)
-            if zam != pasujace.get(otw):
-                print("Ciąg nawiasów nie jest zbalansowany")
-        print("Ciąg nawiasów jest zbalansowany")
-
     #=================================
-    # def fix():
-
+    def fix(słowo):
+        pasujace = {
+           ')':'(',
+            ']':'[',
+            '}':'{'
+        }
+        stos = []
+        licznik = 0
+        ii = 0
+        while ii <len(słowo):
+            if słowo[ii] in ['(','{','[']:
+                stos.append(słowo[ii])
+            elif słowo[ii] in [')','}',']']:
+                while len(stos) != 0 and stos[-1] != słowo[ii]:
+                    licznik += 1
+                    stos.pop(-1)
+                if stos[-1] == słowo[ii]:
+                    stos.pop(-1)
+            ii += 1
+        licznik += len(słowo) - ii
+        return licznik
     #=================================
     # def pairs():
 
@@ -27,22 +49,21 @@ def main():
         nawiasy = [wejście[ii] for ii in range(len(wejście))]
         return nawiasy
     #=================================
-    def dziel(nawiasy):
-        otwierające = []
-        zamykające = []
-        for ii in nawiasy:
-            if ii in ['(','{','[']:
-                otwierające.append(ii)
-            elif ii in [')','}',']']:
-                zamykające.append(ii)
-            else:
-                print("Wyrażenie zawiera znaki inne niż nawiasy, przerywam pracę.")
-                exit()
-        return otwierające, zamykające
+    # def dziel(nawiasy):
+    #     otwierające = []
+    #     zamykające = []
+    #     for ii in nawiasy:
+    #         if ii in ['(','{','[']:
+    #             otwierające.append(ii)
+    #         elif ii in [')','}',']']:
+    #             zamykające.append(ii)
+    #         else:
+    #             print("Wyrażenie zawiera znaki inne niż nawiasy, przerywam pracę.")
+    #             exit()
+    #     return otwierające, zamykające
     #=================================
     wejście = wprowadź()
-    otwierające, zamykające = dziel(wejście)
-    check(otwierające, zamykające)
+    check(wejście)
 
 if __name__== "__main__":
     main()
