@@ -1,20 +1,6 @@
 def main():
     def check(słowo):
-        pasujace = {
-           ')':'(',
-            ']':'[',
-            '}':'{'
-        }
-        stos = []
-        czyjJestGit = True
-        for ii in range(len(słowo)):
-            if słowo[ii] in ['(','{','[']:
-                stos.append(słowo[ii])
-            elif słowo[ii] in [')','}',']']:
-                if stos.pop(-1) != pasujace.get(słowo[ii]):
-                    czyjJestGit = False
-                    break
-        if czyjJestGit:
+        if fix(słowo) == 0:
             print("Ciąg nawiasów jest zbalansowany")
         else:
             print("Ciąg nawiasów nie jest zbalansowany")
@@ -28,20 +14,20 @@ def main():
         stos = []
         licznik = 0
         ii = 0
-        while ii <len(słowo):
+        while ii < len(słowo):
             if słowo[ii] in ['(','{','[']:
                 stos.append(słowo[ii])
+                licznik += 1
             elif słowo[ii] in [')','}',']']:
-                while len(stos) != 0 and stos[-1] != słowo[ii]:
-                    licznik += 1
+                while len(stos) != 0 and stos[-1] != pasujace.get(słowo[ii]):
                     stos.pop(-1)
-                if stos[-1] == słowo[ii]:
+                if len(stos) != 0 and stos[-1] ==  pasujace.get(słowo[ii]):
                     stos.pop(-1)
+                    licznik -= 1
             ii += 1
-        licznik += len(słowo) - ii
         return licznik
     #=================================
-    # def pairs():
+    #def pairs(słowo):
 
     #=================================
     def wprowadź():
@@ -62,8 +48,10 @@ def main():
     #             exit()
     #     return otwierające, zamykające
     #=================================
+    # Część główna programu
+    #=================================
     wejście = wprowadź()
     check(wejście)
-
+    print(fix(wejście))
 if __name__== "__main__":
     main()
