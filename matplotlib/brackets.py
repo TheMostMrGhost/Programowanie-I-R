@@ -2,8 +2,10 @@ def main():
     def check(słowo):
         if fix(słowo) == 0:
             print("Ciąg nawiasów jest zbalansowany")
+            return True
         else:
             print("Ciąg nawiasów nie jest zbalansowany")
+            return False
     #=================================
     def fix(słowo):
         pasujace = {
@@ -27,31 +29,32 @@ def main():
             ii += 1
         return licznik
     #=================================
-    #def pairs(słowo):
-
+    def pairs(słowo, n):
+        start = 0
+        while start + 2*n <len(słowo)+1:
+            podsłowo = ""
+            pom = słowo[start:start + 2*n]
+            for ii in pom:
+                podsłowo += ii
+            if fix(podsłowo) == 0:
+                print(podsłowo)
+            start += 1
     #=================================
     def wprowadź():
         wejście = input("Wprowadź ciąg nawiasów.\n")
         nawiasy = [wejście[ii] for ii in range(len(wejście))]
         return nawiasy
     #=================================
-    # def dziel(nawiasy):
-    #     otwierające = []
-    #     zamykające = []
-    #     for ii in nawiasy:
-    #         if ii in ['(','{','[']:
-    #             otwierające.append(ii)
-    #         elif ii in [')','}',']']:
-    #             zamykające.append(ii)
-    #         else:
-    #             print("Wyrażenie zawiera znaki inne niż nawiasy, przerywam pracę.")
-    #             exit()
-    #     return otwierające, zamykające
-    #=================================
     # Część główna programu
     #=================================
     wejście = wprowadź()
-    check(wejście)
-    print(fix(wejście))
+    decyzja = input("Wybierz opcję\n")
+    if decyzja == "fix":
+        print(fix(wejście))
+    elif decyzja == "check":
+        check(wejście)
+    elif decyzja == "list":
+        n = int(input("Wprowadź n\n"))
+        pairs(wejście,n)
 if __name__== "__main__":
     main()
