@@ -22,6 +22,7 @@ def pokażOpcje():
         "- Rysuj wykres danych dla kraju (dodatkowe parametry dostępne po wybraniu tej opcji) [r]\n" +
         "- Zapisz dane z tabeli do pliku [z]\n" +
         "- Dodaj nowy region (region to połączenie już istniejących krajów/regionów) [d]\n" +
+        "- Wypisz siedmiodniową średnią nowych zakażeń (dodatkowe parametry dostępne po wybraniu tej opcji) [s]\n" +
         "- Wyjdź [q]")
 #=================================================
 def wyświetlListę(lista):
@@ -95,9 +96,13 @@ def main():
                 if który in dos:
                     res.piszPlik(który)
                 else:
-                    print("Nie ma takiej kolumny, zatrzymuję zapisywanie")
+                    print("Nie ma takiej kolumny, przerywam zapisywanie")
                     time.sleep(2)
                     clear()
+            else:
+                print("Nie ma takiego kraju, przerywam zapisywania\n")
+                time.sleep(2)
+                clear()
 
         elif odpowiedź == "d":
             print("Dostępne kraje:\n")
@@ -117,6 +122,17 @@ def main():
                 time.sleep(2)
                 clear()
 
+        elif odpowiedź == "s":
+            print("Wybierz kraj z listy:\n")
+            wyświetlListę(kraje)
+            który = input()
+            res = Kraj.szukajKraju(kraje,nazwa)
+            if res != None:
+                print(res.średnia7Dniowa())
+            else:
+                print("Nie ma takiego kraju")
+            time.sleep(2)
+            clear()
         elif odpowiedź == "q":
             break
 
