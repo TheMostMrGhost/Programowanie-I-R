@@ -1,6 +1,6 @@
-import youtube_dl, cv2, pytesseract as pt, Rozpoznawacz as roz, os
+import youtube_dl, cv2, pytesseract as pt, Rozpoznawacz as roz, os, shutil
 
-TIMEBETWEENSAVING = 5
+DEFAULTPARSINGTIME = 7
 
 class Plik:
     def __init__(self, url, filename):
@@ -8,6 +8,7 @@ class Plik:
         self.filename = filename
         self.pathToFolder = "./"+self.filename + "Dir"
         self.numberOfFiles = 34
+    #====================================================================
     def download(self):
         try:
             os.mkdir(self.pathToFolder)
@@ -25,9 +26,11 @@ class Plik:
                 ydl.download([self.url])
             except youtube_dl.utils.DownloadError: # TODO naprawić to żeby się błąd nie wypisywał, tylko moja wiadomość
                 print("Pobieranie nie powiodło się.")
+    #====================================================================
     def hlp(self):#TODO usunąć to
         help(youtube_dl.YoutubeDL)
-    def parser(self, timeInterval = TIMEBETWEENSAVING):
+    #====================================================================
+    def parser(self, timeInterval = DEFAULTPARSINGTIME):
         video = cv2.VideoCapture(self.pathToFolder + "/" + self.filename + '.mp4')
         fps = video.get(cv2.CAP_PROP_FPS) # Informacja o klatkach na sekundę, bo chcemy ciąć co 5(chyba, że zmienię w końcowej wersji) sekund
         ii = 0 
@@ -41,18 +44,59 @@ class Plik:
                 anyFramesLeft, frame = video.read()
                 kk += 1
         self.numberOfFiles = jj
+    #====================================================================
     def analyzeVideo(self, show):
         recog = roz.Rozpoznawacz(self.pathToFolder + "/" + "frame0.jpg")
         for ii in range(1,self.numberOfFiles+1):
             recog.defaultRecognize(show)
             recog.changeImage(self.pathToFolder + "/" + "frame" + str(ii) +".jpg") # TODO zmienić to ewentualnie bo to trochę dziwnie wygląda
         self.writeStringsToFile(recog.text,self.filename)
+    #====================================================================
     def writeStringsToFile(self, strings, filename):
+        """Zapisuje do pliku teksty, usuwa powtórzenia"""
         if len(strings)<1:
             return
-        with open(self.pathToFolder + "/" + filename + " Wycięte Teksty.txt",'w') as file:
+        with open(filename + " Wycięte Teksty.txt",'w') as file:
             alreadySavedTexts = []
             for ii in strings:
                 if ii not in alreadySavedTexts:
                     file.write(ii+"\n")
                     alreadySavedTexts.append(ii)
+    #====================================================================
+    def cleanAfterWork(self):
+        print(self.pathToFolder)
+        shutil.rmtree(self.pathToFolder)
+    #====================================================================
+    def analyzeLive(self, show = False, timeInterval = DEFAULTPARSINGTIME):
+        video = cv2.VideoCapture(self.pathToFolder + "/" + self.filename + '.mp4')
+        fps = video.get(cv2.CAP_PROP_FPS)
+        anyFramesLeft = True
+        analyzer = roz.Rozpoznawacz("nic")# TODO usunąć to 
+        while anyFramesLeft:
+            anyFramesLeft, frame = video.read()
+            analyzer.addFrameToAnalyze(frame)
+            analyzer.defaultRecognize(False)
+            self.writeStringsToFile(analyzer.text,self.filename)
+            jj = 0
+            for jj in range(int(timeInterval*fps - 1)):
+                anyFramesLeft, frame = video.read()
+            # jj = 0
+            # while anyFramesLeft and jj < timeInterval*fps - 1:
+            #     anyFramesLeft, frame = video.read(5) # FIXME być może to nie działą tutaj
+            #     jj += 1
+    #====================================================================
+    def upgradedAnalyzeLive(self, show = False, timeInterval = DEFAULTPARSINGTIME):
+        video = cv2.VideoCapture(self.pathToFolder + "/" + self.filename + '.mp4')
+        fps = video.get(cv2.CAP_PROP_FPS)
+        anyFramesLeft = True
+        analyzer = roz.Rozpoznawacz() 
+        while anyFramesLeft:
+            anyFramesLeft, frame = video.read()
+            analyzer.addFrameToAnalyze(frame)
+            analyzer.upgradedRecognize(show)
+            self.writeStringsToFile(analyzer.text,self.filename)
+            jj = 0
+            for jj in range(int(timeInterval*fps - 1)):
+                anyFramesLeft, frame = video.read()
+        print(analyzer.licznikQuadratow)
+        print(analyzer.slidingText)
