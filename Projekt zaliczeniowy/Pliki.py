@@ -1,6 +1,6 @@
 import youtube_dl, cv2, pytesseract as pt, Rozpoznawacz as roz, os, shutil
 
-DEFAULTPARSINGTIME = 7
+DEFAULTPARSINGTIME = 6
 
 class Plik:
     def __init__(self, url, filename):
@@ -19,7 +19,7 @@ class Plik:
             'format': 'mp4',
             'quiet': True,
             'no_warnings': True,
-            'writedescription': True, # Czy to jest potrzebne?
+            # 'writedescription': True, # Czy to jest potrzebne?
         }
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             try:
@@ -46,17 +46,18 @@ class Plik:
         self.numberOfFiles = jj
     #====================================================================
     def analyzeVideo(self, show):
+        # TODO usunąć to w cholerę
         recog = roz.Rozpoznawacz(self.pathToFolder + "/" + "frame0.jpg")
         for ii in range(1,self.numberOfFiles+1):
             recog.defaultRecognize(show)
             recog.changeImage(self.pathToFolder + "/" + "frame" + str(ii) +".jpg") # TODO zmienić to ewentualnie bo to trochę dziwnie wygląda
         self.writeStringsToFile(recog.text,self.filename)
     #====================================================================
-    def writeStringsToFile(self, strings, filename):
+    def writeStringsToFile(self, strings): # TODO ulepszyć, żeby można było dużo stringów na raz zapisać
         """Zapisuje do pliku teksty, usuwa powtórzenia"""
         if len(strings)<1:
             return
-        with open(filename + " Wycięte Teksty.txt",'w') as file:
+        with open(self.filename + " Wycięte Teksty.txt",'w') as file:
             alreadySavedTexts = []
             for ii in strings:
                 if ii not in alreadySavedTexts:
@@ -64,7 +65,6 @@ class Plik:
                     alreadySavedTexts.append(ii)
     #====================================================================
     def cleanAfterWork(self):
-        print(self.pathToFolder)
         shutil.rmtree(self.pathToFolder)
     #====================================================================
     def analyzeLive(self, show = False, timeInterval = DEFAULTPARSINGTIME):
@@ -76,26 +76,30 @@ class Plik:
             anyFramesLeft, frame = video.read()
             analyzer.addFrameToAnalyze(frame)
             analyzer.defaultRecognize(False)
-            self.writeStringsToFile(analyzer.text,self.filename)
+            self.writeStringsToFile(analyzer.text)
             jj = 0
             for jj in range(int(timeInterval*fps - 1)):
                 anyFramesLeft, frame = video.read()
-            # jj = 0
-            # while anyFramesLeft and jj < timeInterval*fps - 1:
-            #     anyFramesLeft, frame = video.read(5) # FIXME być może to nie działą tutaj
-            #     jj += 1
     #====================================================================
-    def upgradedAnalyzeLive(self, show = False, timeInterval = DEFAULTPARSINGTIME):
+    def upgradedAnalyzeLive(self, mode = 1, show = False, timeInterval = DEFAULTPARSINGTIME):
         video = cv2.VideoCapture(self.pathToFolder + "/" + self.filename + '.mp4')
         fps = video.get(cv2.CAP_PROP_FPS)
         anyFramesLeft = True
-        analyzer = roz.Rozpoznawacz() 
+        analyzer = roz.Rozpoznawacz()
+        if mode == 1:
+            timeInterval = 40 # TODO sprawdzić czy takie czasy są ok
+        if mode == 2:
+            timeInterval = 8
+        analyzer.selectMode(mode)
         while anyFramesLeft:
             anyFramesLeft, frame = video.read()
             analyzer.addFrameToAnalyze(frame)
-            analyzer.upgradedRecognize(show)
-            jj = 0
+            analyzer.recognize()
             for jj in range(int(timeInterval*fps - 1)):
                 anyFramesLeft, frame = video.read()
-        self.writeStringsToFile(analyzer.text, self.filename)
-        self.writeStringsToFile(analyzer.slidingText, self.filename)
+        if mode >= 1:
+            self.writeStringsToFile(analyzer.textMain)
+        if mode >= 2:
+            self.writeStringsToFile(analyzer.textUnderMain)
+        if mode >= 3: 
+            self.writeStringsToFile(analyzer.slidingText)

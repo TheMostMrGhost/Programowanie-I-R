@@ -7,15 +7,18 @@ class Rozpoznawacz:
         else:
             self.image = None
         # print(self.image.shape)
-        self.text = []
+        self.textMain = []
+        self.textUnderMain = []
         self.slidingText = []
         self.temporalSliding = [""]
-        self.defaultCoordinates1 = (910,970,510,1850)
-        self.defaultCoordinates2 = (975,1050,350,1720)
+        self.mainTickerCoordinates = (800, 910, 350, 1850)
+        self.underMainTickerCoordinates = (910, 970, 510, 1850)
+        self.slidingBarCoordinates = (975, 1050, 350, 1720)
     #====================================================================
-    # Dane: Środkowy pasek: początekX = 510, koniecX = 1850, początekY = 910, koniecY = 970
-# Dolny pasek: początekX = około 360, koniecX = 1720, początekY = 975, koniecY = 1050
-    def recognize(self, show, startY = 0, endY = -1, startX = 0, endX = -1):
+    # Pasek główny: początekX = około 360, koniecX = 1850, początekY = 800, koniecY = 910
+    # Dane: Środkowy pasek: początekX = 510 ( można 360 jeśli się chce z napisem ,,Pilne''), koniecX = 1850, początekY = 910, koniecY = 970
+    # Dolny pasek: początekX = około 360, koniecX = 1720, początekY = 975, koniecY = 1050
+    def __recognize(self, startY = 0, endY = -1, startX = 0, endX = -1):
         if endX == -1:
             endX = self.image.shape[1]
         if endY == -1:
@@ -26,9 +29,9 @@ class Rozpoznawacz:
             print(type(self.image)) 
             return
         config = ("-l pol --oem 2 --psm 7") # język polski, traktujamy całość wycinka jako tekst, TODO to trzecie, wybór algorytmu szukającego chyba
-        if show:
-            plt.imshow(roi) # TODO wrzucić resize'a jakiegoś bo inaczej trochę świruje
-            plt.show()
+        # if show:
+        plt.imshow(roi) # TODO wrzucić resize'a jakiegoś bo inaczej trochę świruje
+        plt.show()
         text = pt.image_to_string(roi)
         return Rozpoznawacz.validCharacters(text)
     #====================================================================
@@ -46,29 +49,45 @@ class Rozpoznawacz:
     def changeImage(self, newFilename):
         self.image = cv2.imread(newFilename, cv2.IMREAD_GRAYSCALE)
     #====================================================================
-    def defaultRecognize(self, show):
-        self.text.append(self.recognize(show, *self.defaultCoordinates1))
-        self.text.append(self.recognize(show, *self.defaultCoordinates2))
+    def defaultRecognize(self):
+        # TODO Poniższe dwie do usunięcia
+        self.text.append(self.__recognize(*self.defaultCoordinates1))
+        self.text.append(self.__recognize(*self.defaultCoordinates2))
     #====================================================================
-    def upgradedRecognize(self, show):
-        self.text.append(self.recognize(show, *self.defaultCoordinates1))
-        self.recognizeSliding(show)
+    def upgradedRecognize(self):
+        # FIXME to jeszcze nie działa tak dobrze jak powinno
+        self.text.append(self.__recognize(*self.defaultCoordinates1))
+        self.__recognizeSliding()
     #====================================================================
-    def recognizeSliding(self, show):
+    def recognize(self):
+        if self.mode == 1:
+            self.__recognizeMain()
+        elif self.mode == 2:
+            self.__recognizeUnderMain()
+        elif self.mainTickerCoordinates == 3:
+            self.__recognizeSliding()
+    #====================================================================
+    def __recognizeMain(self):
+        self.textMain.append(self.__recognize(*self.mainTickerCoordinates))
+    #====================================================================
+    def __recognizeUnderMain(self): # TODO zmienić tą nazwę na jakąś sensowną
+        self.textUnderMain.append(self.__recognize(*self.mainTickerCoordinates))
+    #====================================================================
+    def __recognizeSliding(self):
         """Czyta z paska przesuwnego"""
         slidingBarCord = list(self.defaultCoordinates2)
         squarePosition = self.findSquare(*self.defaultCoordinates2)
         if squarePosition == None:
-            self.temporalSliding.append(self.recognize(show, *self.defaultCoordinates2))
+            self.temporalSliding.append(self.__recognize(*self.defaultCoordinates2))
         else:
             slidingBarLeft = slidingBarCord.copy()
             slidingBarRight = slidingBarCord.copy()
             slidingBarLeft[3] = slidingBarLeft[2] + squarePosition[0]
             slidingBarRight[2] = slidingBarRight[2] + squarePosition[0] + squarePosition[1]
-            self.temporalSliding.append(self.recognize(show, *slidingBarLeft))
+            self.slidingText.append(self.__recognize(*slidingBarLeft))
             self.combine() # TODO sprawdzić czy w funkcji dałem że to się automatycznie dołącza do końca listy tekstów
             self.temporalSliding = []
-            self.temporalSliding.append(self.recognize(show, *slidingBarRight))
+            self.temporalSliding.append(self.__recognize(*slidingBarRight))
     #====================================================================
     def addFrameToAnalyze(self, image):
         self.image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
@@ -87,8 +106,10 @@ class Rozpoznawacz:
                 kwadrat = wymiary
         return kwadrat
     #====================================================================
+    # FIXME strefa eksperymentalna
+    #====================================================================
     def combine(self):
-
+        # FIXME Zrobić żeby działało i dodać jako opcję
         def attach(string, listOfStrings):
             for ii in listOfStrings:
                 string += " " + ii
@@ -124,6 +145,9 @@ class Rozpoznawacz:
         if index < len(self.temporalSliding[-1]):
             res = attach(res,temp[index:])
         self.slidingText.append(res)
+    #====================================================================
+    def selectMode(self, mode):
+        self.mode = mode
     #====================================================================
     @staticmethod
     def checkIfSquare(krzywa):
