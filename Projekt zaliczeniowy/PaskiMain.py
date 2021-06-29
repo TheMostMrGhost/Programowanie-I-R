@@ -1,6 +1,5 @@
 from Pliki import *
 import Rozpoznawacz as roz
-# Przykładowy plik: https://www.youtube.com/watch?v=fxvg_xOy4Y4
 #=======================================================================================
 def podajFilmy(): 
     filmy = []

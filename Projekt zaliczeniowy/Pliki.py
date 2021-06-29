@@ -94,9 +94,8 @@ class Plik:
             anyFramesLeft, frame = video.read()
             analyzer.addFrameToAnalyze(frame)
             analyzer.upgradedRecognize(show)
-            self.writeStringsToFile(analyzer.text,self.filename)
             jj = 0
             for jj in range(int(timeInterval*fps - 1)):
                 anyFramesLeft, frame = video.read()
-        print(analyzer.licznikQuadratow)
-        print(analyzer.slidingText)
+        self.writeStringsToFile(analyzer.text, self.filename)
+        self.writeStringsToFile(analyzer.slidingText, self.filename)

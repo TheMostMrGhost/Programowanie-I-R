@@ -8,10 +8,10 @@ class Rozpoznawacz:
             self.image = None
         # print(self.image.shape)
         self.text = []
-        self.slidingText = [""]
+        self.slidingText = []
+        self.temporalSliding = [""]
         self.defaultCoordinates1 = (910,970,510,1850)
         self.defaultCoordinates2 = (975,1050,350,1720)
-        self.licznikQuadratow = 0 # FIXME usunąć to
     #====================================================================
     # Dane: Środkowy pasek: początekX = 510, koniecX = 1850, początekY = 910, koniecY = 970
 # Dolny pasek: początekX = około 360, koniecX = 1720, początekY = 975, koniecY = 1050
@@ -49,15 +49,6 @@ class Rozpoznawacz:
     def defaultRecognize(self, show):
         self.text.append(self.recognize(show, *self.defaultCoordinates1))
         self.text.append(self.recognize(show, *self.defaultCoordinates2))
-        # """Rozpoznawanie wybranych przez autora fragmentów obrazu"""
-    # def sciągnijRamkę(self, newW, newH): #TODO zmienić nazwe
-    #     (origH, origW) = self.image.shape[:2]
-    #     rW = origW / float(newW)
-    #     rH = origH / float(newH)
-    #     self.image = cv2.resize(image, (newW, newH))
-    #     (H, W) = self.image.shape[:2]
-    #     print(origH, origW)
-    #     print(H, W)
     #====================================================================
     def upgradedRecognize(self, show):
         self.text.append(self.recognize(show, *self.defaultCoordinates1))
@@ -66,23 +57,18 @@ class Rozpoznawacz:
     def recognizeSliding(self, show):
         """Czyta z paska przesuwnego"""
         slidingBarCord = list(self.defaultCoordinates2)
-        # x = self.defaultCoordinates2[0]
-        # y = self.defaultCoordinates2[1]
-        # z = self.defaultCoordinates2[2]
-        # t = self.defaultCoordinates2[3]
-        # xd = self.image[x:y, z: t]
-        # plt.imshow(xd)
-        # plt.show()
         squarePosition = self.findSquare(*self.defaultCoordinates2)
         if squarePosition == None:
-            self.slidingText[-1] += self.recognize(show, *self.defaultCoordinates2)
+            self.temporalSliding.append(self.recognize(show, *self.defaultCoordinates2))
         else:
             slidingBarLeft = slidingBarCord.copy()
             slidingBarRight = slidingBarCord.copy()
             slidingBarLeft[3] = slidingBarLeft[2] + squarePosition[0]
             slidingBarRight[2] = slidingBarRight[2] + squarePosition[0] + squarePosition[1]
-            self.slidingText[-1] += self.recognize(show, *slidingBarLeft)
-            self.slidingText.append(self.recognize(show, *slidingBarRight))
+            self.temporalSliding.append(self.recognize(show, *slidingBarLeft))
+            self.combine() # TODO sprawdzić czy w funkcji dałem że to się automatycznie dołącza do końca listy tekstów
+            self.temporalSliding = []
+            self.temporalSliding.append(self.recognize(show, *slidingBarRight))
     #====================================================================
     def addFrameToAnalyze(self, image):
         self.image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
@@ -99,8 +85,45 @@ class Rozpoznawacz:
             czyKwadrat, wymiary = Rozpoznawacz.checkIfSquare(c)
             if czyKwadrat:
                 kwadrat = wymiary
-                self.licznikQuadratow +=1
         return kwadrat
+    #====================================================================
+    def combine(self):
+
+        def attach(string, listOfStrings):
+            for ii in listOfStrings:
+                string += " " + ii
+            return string
+        #====================================================================
+        def findWordInString(string, word):
+            temp = string.split()
+            ii = 0
+            while ii< len(temp) and temp[ii] != word:
+                ii+=1
+            return ii
+        #====================================================================
+        res = ""
+        if len(self.temporalSliding) == 0:
+            return
+        first = self.temporalSliding[0].split()
+        if len(first)<=1:
+            print("Co tu zrobić?") # TODO
+            return
+        res += first[0]
+        for ii in range(1,len(first)):
+            res += " " + first[ii]
+        last = first[-2] # TODO być moze tu jest off by 1
+        for ii in range(1,len(self.temporalSliding)-1):
+            index = findWordInString(last,self.temporalSliding[ii])
+            temp = self.temporalSliding[ii].split()
+            if index < len(self.temporalSliding[ii]):
+                res = attach(res,temp[index:-1])
+            last = temp[-2] # TODO ogarnąć to off by 1
+        # Obsługa ostatniego słowa
+        index = findWordInString(last,self.temporalSliding[-1])
+        temp = self.temporalSliding[-1].split()
+        if index < len(self.temporalSliding[-1]):
+            res = attach(res,temp[index:])
+        self.slidingText.append(res)
     #====================================================================
     @staticmethod
     def checkIfSquare(krzywa):
@@ -110,8 +133,6 @@ class Rozpoznawacz:
             return False, (0,0,0,0)
         (x, y, w, h) = cv2.boundingRect(approx)
         ar = w/float(h)
-        # print(ar)
-        # print((x, y, w, h))
         if ar>0.87 and ar<1/0.87 and y>20 and y<32: # TODO sprawdzić czy to jest gites
             return True, (x, y, w, h)
         return False, (x, y, w, h)
