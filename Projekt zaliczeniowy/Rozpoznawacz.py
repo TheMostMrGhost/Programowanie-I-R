@@ -1,19 +1,25 @@
 import youtube_dl, cv2, pytesseract as pt, matplotlib.pyplot as plt, imutils
-
+#====================================================================
+TICKERWIDTHLOWERBOUND = 1000
+UNDERMAINLOWER_Y = 780
+UNDERMAINUPPER_Y = 1100
+UNDERMAINLOWER_X = 340
+MAINTICKERHEIGHT = 110
+#====================================================================
 class Rozpoznawacz:
     def __init__(self, filename = None): #TODO dodać wybór formatu osobno TODO 2 usunąć inicjalizownaie plikiem
         if filename != None:
             self.image = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)# Robimy w odcieniach szarości bo inaczej wykrywacz świruje
         else:
             self.image = None
-        # print(self.image.shape)
+        
         self.textMain = []
         self.textUnderMain = []
-        self.slidingText = []
-        self.temporalSliding = [""]
-        self.mainTickerCoordinates = (800, 910, 350, 1850)
-        self.underMainTickerCoordinates = (910, 970, 510, 1850)
+        self.findTicker() # Konwencja: najpierw y potem x, ustawiamy gdzie są tickery
+        # FIXME poniższe usunąć
         self.slidingBarCoordinates = (975, 1050, 350, 1720)
+        self.temporalSliding = [""]
+        self.slidingText = []
     #====================================================================
     # Pasek główny: początekX = około 360, koniecX = 1850, początekY = 800, koniecY = 910
     # Dane: Środkowy pasek: początekX = 510 ( można 360 jeśli się chce z napisem ,,Pilne''), koniecX = 1850, początekY = 910, koniecY = 970
@@ -105,6 +111,39 @@ class Rozpoznawacz:
             if czyKwadrat:
                 kwadrat = wymiary
         return kwadrat
+    #====================================================================
+    def findTicker(self):
+
+        def checkIfRectangle(krzywa):
+            peri = cv2.arcLength(krzywa,True)
+            approx = cv2.approxPolyDP(krzywa,0.05*peri,True)
+            (x, y, w, h) = cv2.boundingRect(approx)
+
+            if w>TICKERWIDTHLOWERBOUND:
+                return True, (x, y, w, h)
+            return False, (x, y, w, h)
+        #================================================================
+        if self.image == None: # TODO zrobić to jakiś custom wyjątek
+            return
+        roi = self.image[UNDERMAINLOWER_Y:UNDERMAINUPPER_Y, UNDERMAINLOWER_X:]# TODO sprawdzić czy takie wymiary są ok
+        blurred = cv2.GaussianBlur(roi, (5, 5), 1)
+        thresh = cv2.threshold(blurred,150,255,cv2.THRESH_BINARY)[1]
+        cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+        rectangle = None
+        roiCopy = roi.copy()
+
+        for c in cnts:
+            isRectangle, mes = checkIfRectangle(c)
+            if isRectangle:
+                cv2.drawContours(roiCopy, [c], -1, (255, 0, 255), 5)
+                rectangle = mes
+        if rectangle != None:
+            self.mainTickerCoordinates = (UNDERMAINLOWER_Y + rectangle[1] - MAINTICKERHEIGHT, 
+            UNDERMAINLOWER_Y + rectangle[1], UNDERMAINLOWER_X + rectangle[0], self.image.shape[1])
+            self.underMainTickerCoordinates = (UNDERMAINLOWER_Y + rectangle[1], UNDERMAINLOWER_Y + rectangle[1] + rectangle[3],
+            UNDERMAINLOWER_X + rectangle[0], UNDERMAINLOWER_X + rectangle[0] + rectangle[2])
     #====================================================================
     # FIXME strefa eksperymentalna
     #====================================================================
