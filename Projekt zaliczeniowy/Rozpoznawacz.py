@@ -1,4 +1,4 @@
-import youtube_dl, cv2, pytesseract as pt, matplotlib.pyplot as plt, imutils
+import youtube_dl, cv2, pytesseract as pt, matplotlib.pyplot as plt, imutils, numpy as np
 #====================================================================
 TICKERWIDTHLOWERBOUND = 1000
 TICKERWIDTHUPPERBOUND = 75
@@ -12,7 +12,7 @@ DEFAULTUNDERMAINCOORDINATES = (970, 1040, 420, 1700)
 class Rozpoznawacz:
     def __init__(self, filename = None): #TODO dodać wybór formatu osobno TODO 2 usunąć inicjalizownaie plikiem 
         if filename != None:
-            self.image = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)# Robimy w odcieniach szarości bo inaczej wykrywacz świruje
+            self.image = cv2.imread(filename, cv2.IMREAD_COLOR)# Robimy w odcieniach szarości bo inaczej wykrywacz świruje
         else:
             self.image = None
         
@@ -26,7 +26,7 @@ class Rozpoznawacz:
     # Pasek główny: początekX = około 360, koniecX = 1850, początekY = 800, koniecY = 910
     # Dane: Środkowy pasek: początekX = 510 ( można 360 jeśli się chce z napisem ,,Pilne''), koniecX = 1850, początekY = 910, koniecY = 970
     # Dolny pasek: początekX = około 360, koniecX = 1720, początekY = 975, koniecY = 1050
-    def __recognize(self, startY = 0, endY = -1, startX = 0, endX = -1):
+    def __recognize(self, convert, startY = 0, endY = -1, startX = 0, endX = -1):
         if endX == -1:
             endX = self.image.shape[1]
         if endY == -1:
@@ -37,25 +37,34 @@ class Rozpoznawacz:
             print(type(self.image)) 
             return
         config = ("-l pol --oem 2 --psm 7") # język polski, traktujamy całość wycinka jako tekst, TODO to trzecie, wybór algorytmu szukającego chyba
-        # if show:
-        plt.imshow(roi) # TODO wrzucić resize'a jakiegoś bo inaczej trochę świruje
-        plt.show()
+        if convert:
+            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+            whiteLower = np.array([50,50,50])
+            whiteUpper = np.array([255,255,255])
+            mask = cv2.inRange(roi, whiteLower, whiteUpper)
+            roi[mask > 0] = (0,0,0)
+            roi[mask==0] = (255,255,255)
+            # plt.imshow(roi) # TODO wrzucić resize'a jakiegoś bo inaczej trochę świruje
+            # plt.show()
+        else:
+            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        
         text = pt.image_to_string(roi)
         return Rozpoznawacz.validCharacters(text)
     #====================================================================
     @staticmethod
     def validCharacters(text):
         """Sprawdza czy dany znak jest w miarę legalny""" # TODO Dodać lepszy opis
-        polishCharacters = ['ą','ę','ś','ć','ó','ż','ź','ł',' ','!', ',', '.','?',':',';','Ł','Ż','Ą','Ę','Ź','Ś','Ć']
+        polishCharacters = ['ą','ę','ś','ć','ó','ż','ź','ł',' ','!', ',', '.','|','?',':',';','Ł','Ż','Ą','Ę','Ź','Ś','Ć']
         res = ""
         for letter in text: 
             temp = letter.lower()
             if (ord(temp)>64 and  ord(temp)<123) or (ord(temp)>47 and ord(temp) < 58) or temp in polishCharacters:
-                res +=letter
+                res += letter
         return res.strip()
     #====================================================================
     def changeImage(self, newFilename):
-        self.image = cv2.imread(newFilename, cv2.IMREAD_GRAYSCALE)
+        self.image = cv2.imread(newFilename, cv2.IMREAD_COLOR)
     #====================================================================
     def defaultRecognize(self):
         # TODO Poniższe dwie do usunięcia
@@ -76,10 +85,10 @@ class Rozpoznawacz:
             self.__recognizeSliding()
     #====================================================================
     def __recognizeMain(self):
-        self.textMain.append(self.__recognize(*self.mainTickerCoordinates))
+        self.textMain.append(self.__recognize(True,*self.mainTickerCoordinates))
     #====================================================================
     def __recognizeUnderMain(self): # TODO zmienić tą nazwę na jakąś sensowną
-        self.textUnderMain.append(self.__recognize(*self.underMainTickerCoordinates))
+        self.textUnderMain.append(self.__recognize(False,*self.underMainTickerCoordinates))
     #====================================================================
     #TODO usunąć
     def __recognizeSliding(self):
@@ -99,7 +108,7 @@ class Rozpoznawacz:
             self.temporalSliding.append(self.__recognize(*slidingBarRight))
     #====================================================================
     def addFrameToAnalyze(self, image):
-        self.image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+        self.image = image # TODO zmienić być może
     #====================================================================
     #TODO usunąć
     def findSquare(self, startY, endY, startX, endX):
@@ -131,6 +140,7 @@ class Rozpoznawacz:
         # if self.image == None: # TODO zrobić to jakiś custom wyjątek
         #     return
         roi = self.image[UNDERMAINLOWER_Y:UNDERMAINUPPER_Y, UNDERMAINLOWER_X:]# TODO sprawdzić czy takie wymiary są ok
+        roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(roi, (5, 5), 1)
         thresh = cv2.threshold(blurred,150,255,cv2.THRESH_BINARY)[1]
         cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
@@ -143,8 +153,8 @@ class Rozpoznawacz:
             isRectangle, mes = checkIfRectangle(c)
             if isRectangle:
                 cv2.drawContours(roiCopy, [c], -1, (255, 0, 255), 5) # TODO usunąć
-                plt.imshow(roiCopy)
-                plt.show()
+                # plt.imshow(roiCopy)
+                # plt.show()
                 rectangle = mes
         if rectangle != None:
             self.mainTickerCoordinates = (UNDERMAINLOWER_Y + rectangle[1] - MAINTICKERHEIGHT, 
