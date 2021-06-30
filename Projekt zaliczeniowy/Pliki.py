@@ -8,6 +8,7 @@ class Plik:
         self.filename = filename
         self.pathToFolder = "./"+self.filename + "Dir"
         self.numberOfFiles = 34
+        self.isFileBroken = False
     #====================================================================
     def download(self):
         try:
@@ -19,13 +20,14 @@ class Plik:
             'format': 'mp4',
             'quiet': True,
             'no_warnings': True,
-            # 'writedescription': True, # Czy to jest potrzebne?
+
         }
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             try:
                 ydl.download([self.url])
             except youtube_dl.utils.DownloadError: # TODO naprawić to żeby się błąd nie wypisywał, tylko moja wiadomość
                 print("Pobieranie nie powiodło się.")
+                self.isFileBroken = True
     #====================================================================
     def hlp(self):#TODO usunąć to
         help(youtube_dl.YoutubeDL)
@@ -57,7 +59,7 @@ class Plik:
         """Zapisuje do pliku teksty, usuwa powtórzenia"""
         if len(strings)<1:
             return
-        with open(self.filename + " Wycięte Teksty.txt",'w') as file:
+        with open(self.filename + " Wycięte Teksty.txt",'a') as file:
             alreadySavedTexts = []
             for ii in strings:
                 if ii not in alreadySavedTexts:
@@ -81,25 +83,35 @@ class Plik:
             for jj in range(int(timeInterval*fps - 1)):
                 anyFramesLeft, frame = video.read()
     #====================================================================
-    def upgradedAnalyzeLive(self, mode = 1, show = False, timeInterval = DEFAULTPARSINGTIME):
+    def upgradedAnalyzeLive(self, mode = 1, timeInterval = DEFAULTPARSINGTIME):
+        if self.isFileBroken:
+            return
         video = cv2.VideoCapture(self.pathToFolder + "/" + self.filename + '.mp4')
         fps = video.get(cv2.CAP_PROP_FPS)
-        anyFramesLeft = True
         analyzer = roz.Rozpoznawacz()
+        anyFramesLeft, frame = video.read() # TODO ogarnąć jakieś błędy
+        analyzer.addFrameToAnalyze(frame)
+        analyzer.findTicker()
+        analyzer.selectMode(mode)
         if mode == 1:
             timeInterval = 40 # TODO sprawdzić czy takie czasy są ok
         if mode == 2:
             timeInterval = 8
-        analyzer.selectMode(mode)
+
         while anyFramesLeft:
             anyFramesLeft, frame = video.read()
             analyzer.addFrameToAnalyze(frame)
             analyzer.recognize()
+
             for jj in range(int(timeInterval*fps - 1)):
                 anyFramesLeft, frame = video.read()
+
         if mode >= 1:
             self.writeStringsToFile(analyzer.textMain)
+            print("Tryb 1")
         if mode >= 2:
             self.writeStringsToFile(analyzer.textUnderMain)
+            print("Tryb 2")
         if mode >= 3: 
             self.writeStringsToFile(analyzer.slidingText)
+            print("Tryb 3")

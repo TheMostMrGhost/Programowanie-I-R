@@ -1,5 +1,5 @@
 from Pliki import *
-import Rozpoznawacz as roz, time
+import Rozpoznawacz as roz, os
 #=======================================================================================
 def podajFilmy(): 
     filmy = []
@@ -21,7 +21,7 @@ def clean(filmy): # TODO przenieść do do Pliki
 #=======================================================================================
 def chooseMode():
     print("W programie dostępne są trzy tryby:\n 1) Podstawowy. Odczytuje tylko napisy z głównego " + 
-    "tickera.\n 2) Rozszerzony. Odczytuje napisy z tickera głównego i tickera ,,Pilne\'\'.\n "+
+    "tickera.\n 2) Rozszerzony. Odczytuje napisy z tickera głównego i tickera dodatkowego.\n "+
     "3) Eksperymentaly. Odczytuje ticker główny, tiker ,,Pilne\'\' i pasek przesuwny. UWAGA! Wykonanie programu w tym trybie trwa"+ 
     " bardzo długo i nie zawsze daje poprawne rezultaty.") # FIXME sprawdzić czy ten opis dalej działa
     choice = input("Wybierz tryb wpisując jego numer i naciskając ENTER.\n")
@@ -38,7 +38,8 @@ def chooseMode():
     # TODO dokończyć to
 #=======================================================================================
 def main():
-    print("Witaj w programie do wycinania z tickerów.")
+    os.system('cls')
+    print("Witaj w programie do wycinania tickerów.")
     filmy = podajFilmy()
     if len(filmy) == 0:
         return
@@ -65,4 +66,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() # Usunąć te argumenty wszystkie
+    main()

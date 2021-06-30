@@ -1,21 +1,23 @@
 import youtube_dl, cv2, pytesseract as pt, matplotlib.pyplot as plt, imutils
 #====================================================================
 TICKERWIDTHLOWERBOUND = 1000
+TICKERWIDTHUPPERBOUND = 75
 UNDERMAINLOWER_Y = 780
 UNDERMAINUPPER_Y = 1100
 UNDERMAINLOWER_X = 340
 MAINTICKERHEIGHT = 110
+UNDERMAINSQUARESIZE = 60 # W pasku PILNE jest taki mały prostokąt na początku linii i tesseract go czyta, trzeba go pominąć
+DEFAULTUNDERMAINCOORDINATES = (970, 1040, 420, 1700)
 #====================================================================
 class Rozpoznawacz:
-    def __init__(self, filename = None): #TODO dodać wybór formatu osobno TODO 2 usunąć inicjalizownaie plikiem
+    def __init__(self, filename = None): #TODO dodać wybór formatu osobno TODO 2 usunąć inicjalizownaie plikiem 
         if filename != None:
             self.image = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)# Robimy w odcieniach szarości bo inaczej wykrywacz świruje
         else:
             self.image = None
         
-        self.textMain = []
-        self.textUnderMain = []
-        self.findTicker() # Konwencja: najpierw y potem x, ustawiamy gdzie są tickery
+        self.textMain = ["Główny Ticker:"]
+        self.textUnderMain = ["Ticker Dodatkowy:"]
         # FIXME poniższe usunąć
         self.slidingBarCoordinates = (975, 1050, 350, 1720)
         self.temporalSliding = [""]
@@ -66,19 +68,20 @@ class Rozpoznawacz:
         self.__recognizeSliding()
     #====================================================================
     def recognize(self):
-        if self.mode == 1:
+        if self.mode >= 1:
             self.__recognizeMain()
-        elif self.mode == 2:
+        if self.mode >= 2:
             self.__recognizeUnderMain()
-        elif self.mainTickerCoordinates == 3:
+        if self.mode >= 3:
             self.__recognizeSliding()
     #====================================================================
     def __recognizeMain(self):
         self.textMain.append(self.__recognize(*self.mainTickerCoordinates))
     #====================================================================
     def __recognizeUnderMain(self): # TODO zmienić tą nazwę na jakąś sensowną
-        self.textUnderMain.append(self.__recognize(*self.mainTickerCoordinates))
+        self.textUnderMain.append(self.__recognize(*self.underMainTickerCoordinates))
     #====================================================================
+    #TODO usunąć
     def __recognizeSliding(self):
         """Czyta z paska przesuwnego"""
         slidingBarCord = list(self.defaultCoordinates2)
@@ -98,6 +101,7 @@ class Rozpoznawacz:
     def addFrameToAnalyze(self, image):
         self.image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
     #====================================================================
+    #TODO usunąć
     def findSquare(self, startY, endY, startX, endX):
         image = self.image.copy()
         image = image[startY:endY, startX:endX]
@@ -112,19 +116,20 @@ class Rozpoznawacz:
                 kwadrat = wymiary
         return kwadrat
     #====================================================================
-    def findTicker(self):
+    def findTicker(self): # Konwencja: najpierw y potem x, ustawiamy gdzie są tickery
 
         def checkIfRectangle(krzywa):
             peri = cv2.arcLength(krzywa,True)
             approx = cv2.approxPolyDP(krzywa,0.05*peri,True)
             (x, y, w, h) = cv2.boundingRect(approx)
 
-            if w>TICKERWIDTHLOWERBOUND:
+            if w > TICKERWIDTHLOWERBOUND and h < TICKERWIDTHUPPERBOUND:
+                print(w,h)
                 return True, (x, y, w, h)
             return False, (x, y, w, h)
         #================================================================
-        if self.image == None: # TODO zrobić to jakiś custom wyjątek
-            return
+        # if self.image == None: # TODO zrobić to jakiś custom wyjątek
+        #     return
         roi = self.image[UNDERMAINLOWER_Y:UNDERMAINUPPER_Y, UNDERMAINLOWER_X:]# TODO sprawdzić czy takie wymiary są ok
         blurred = cv2.GaussianBlur(roi, (5, 5), 1)
         thresh = cv2.threshold(blurred,150,255,cv2.THRESH_BINARY)[1]
@@ -137,13 +142,22 @@ class Rozpoznawacz:
         for c in cnts:
             isRectangle, mes = checkIfRectangle(c)
             if isRectangle:
-                cv2.drawContours(roiCopy, [c], -1, (255, 0, 255), 5)
+                cv2.drawContours(roiCopy, [c], -1, (255, 0, 255), 5) # TODO usunąć
+                plt.imshow(roiCopy)
+                plt.show()
                 rectangle = mes
         if rectangle != None:
             self.mainTickerCoordinates = (UNDERMAINLOWER_Y + rectangle[1] - MAINTICKERHEIGHT, 
             UNDERMAINLOWER_Y + rectangle[1], UNDERMAINLOWER_X + rectangle[0], self.image.shape[1])
-            self.underMainTickerCoordinates = (UNDERMAINLOWER_Y + rectangle[1], UNDERMAINLOWER_Y + rectangle[1] + rectangle[3],
-            UNDERMAINLOWER_X + rectangle[0], UNDERMAINLOWER_X + rectangle[0] + rectangle[2])
+            self.underMainTickerCoordinates = (UNDERMAINLOWER_Y + rectangle[1],
+                UNDERMAINLOWER_Y + rectangle[1] + rectangle[3], UNDERMAINLOWER_X + UNDERMAINSQUARESIZE + rectangle[0],
+                UNDERMAINLOWER_X + UNDERMAINSQUARESIZE + rectangle[0] + rectangle[2])
+        else:
+            self.underMainTickerCoordinates = DEFAULTUNDERMAINCOORDINATES # Jeżeli uda się znaleźć pasek PILNE to te wartości zostaną nadpisane, ale 
+            # w przypadku błędu funkcji szukającej paska zostaną użyte te dane
+        
+            self.mainTickerCoordinates = (DEFAULTUNDERMAINCOORDINATES[0] - MAINTICKERHEIGHT, 
+                    DEFAULTUNDERMAINCOORDINATES[0], DEFAULTUNDERMAINCOORDINATES[2] - UNDERMAINSQUARESIZE, self.image.shape[1])
     #====================================================================
     # FIXME strefa eksperymentalna
     #====================================================================
@@ -188,6 +202,7 @@ class Rozpoznawacz:
     def selectMode(self, mode):
         self.mode = mode
     #====================================================================
+    #TODO usunąć
     @staticmethod
     def checkIfSquare(krzywa):
         peri = cv2.arcLength(krzywa,True)
