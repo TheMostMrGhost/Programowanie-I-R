@@ -1,26 +1,24 @@
 from Pliki import *
 import Rozpoznawacz as roz, os
 #=======================================================================================
-def podajFilmy(): 
-    filmy = []
-    nowyFilm = "a"
-    while nowyFilm!= 'q':
-        nowyFilm = input("Podaj link do filmu lub wpisz \'q\' by zakończyć dodawanie\n")
-        if nowyFilm == 'q':
+def loadFilms():
+    films = []
+    newFilm = "foo"
+    while newFilm != 'q':
+        newFilm = input("Podaj link do filmu lub wpisz \'q\' by zakończyć dodawanie\n")
+        if newFilm == 'q':
             break
-        filmy.append(Plik(nowyFilm,"film" + str(len(filmy))))# TODO zrobić to regexpami 
-    wybór = input("Czy chcesz ominąć proces pobierania? [y/n]") == "y"# TODO to do usunięcia
-    if not wybór:
-        any(map(lambda x: x.download(), filmy))
-    return filmy
+        films.append(Plik(newFilm))
+    any(map(lambda x: x.download(), films))
+    return films
 #=======================================================================================
-def clean(filmy): # TODO przenieść do do Pliki 
-    czyścimy = input("Czy chcesz po sobie posprzątać [y/n]?\n") == "y"
-    if czyścimy:
-        any(map(lambda x: x.cleanAfterWork(),filmy))
+def clean(films):
+    doYouWantToClean = input("Czy chcesz usunąć produkty pośrednie (pobrane filmy i utworzone foldery) [y/n]?\n") == "y"
+    if doYouWantToClean:
+        any(map(lambda x: x.cleanAfterWork(), films))
 #=======================================================================================
 def chooseMode():
-    print("W programie dostępne są trzy tryby:\n 1) Podstawowy. Odczytuje tylko napisy z głównego " + 
+    print("W programie dostępne są natępujące tryby:\n 1) Podstawowy. Odczytuje tylko napisy z głównego " + 
     "tickera.\n 2) Rozszerzony. Odczytuje napisy z tickera głównego i tickera dodatkowego.\n ")
     choice = input("Wybierz tryb wpisując jego numer i naciskając ENTER.\n")
     while True:
@@ -35,12 +33,12 @@ def chooseMode():
 def main():
     os.system('cls')
     print("Witaj w programie do wycinania tickerów.")
-    filmy = podajFilmy()
-    if len(filmy) == 0:
+    films = loadFilms()
+    if len(films) == 0:
         return
     mode = chooseMode()
-    any(map(lambda x: x.upgradedAnalyzeLive(mode), filmy))
-    clean(filmy)
+    any(map(lambda x: x.upgradedAnalyzeLive(mode), films))
+    clean(films)
 
 
 if __name__ == "__main__":

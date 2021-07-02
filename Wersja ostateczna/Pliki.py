@@ -3,9 +3,10 @@ import youtube_dl, cv2, pytesseract as pt, Rozpoznawacz as roz, os, shutil
 DEFAULTPARSINGTIME = 6
 
 class Plik:
-    def __init__(self, url, filename):
+    def __init__(self, url):
         self.url = url
-        self.filename = filename
+        parsed = self.url.split("/")[4].split('-')
+        self.filename = parsed[0] + '-' + parsed[1] + '-' + parsed[2] 
         self.pathToFolder = "./"+self.filename + "Dir"
         self.isFileBroken = False
     #====================================================================
@@ -28,11 +29,11 @@ class Plik:
                 print("Pobieranie nie powiodło się.")
                 self.isFileBroken = True
     #====================================================================
-    def writeStringsToFile(self, strings): # TODO ulepszyć, żeby można było dużo stringów na raz zapisać
+    def writeStringsToFile(self, strings):
         """Zapisuje do pliku teksty, usuwa powtórzenia"""
         if len(strings)<1:
             return
-        with open(self.filename + " Wycięte Teksty.txt",'a') as file:
+        with open(self.filename + " Wycięte Teksty.txt",'a', encoding = 'utf8') as file:
             alreadySavedTexts = []
             for ii in strings:
                 if ii not in alreadySavedTexts:
@@ -48,12 +49,12 @@ class Plik:
         video = cv2.VideoCapture(self.pathToFolder + "/" + self.filename + '.mp4')
         fps = video.get(cv2.CAP_PROP_FPS)
         analyzer = roz.Rozpoznawacz()
-        anyFramesLeft, frame = video.read() # TODO ogarnąć jakieś błędy
+        anyFramesLeft, frame = video.read()
         analyzer.addFrameToAnalyze(frame)
         analyzer.findTicker()
         analyzer.selectMode(mode)
         if mode == 1:
-            timeInterval = 40 # TODO sprawdzić czy takie czasy są ok
+            timeInterval = 40
         if mode == 2:
             timeInterval = 8
 
@@ -68,4 +69,6 @@ class Plik:
         if mode >= 1:
             self.writeStringsToFile(analyzer.textMain)
         if mode >= 2:
+            with open(self.filename + " Wycięte Teksty.txt",'a', encoding = 'utf8') as file:
+                file.write("\n") # Rozdzielam napisy z tickera głównego i dodatkowego
             self.writeStringsToFile(analyzer.textUnderMain)

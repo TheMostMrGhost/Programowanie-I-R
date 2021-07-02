@@ -10,9 +10,9 @@ UNDERMAINSQUARESIZE = 60 # W pasku PILNE jest taki mały prostokąt na początku
 DEFAULTUNDERMAINCOORDINATES = (970, 1040, 420, 1700)
 #====================================================================
 class Rozpoznawacz:
-    def __init__(self, filename = None): #TODO dodać wybór formatu osobno TODO 2 usunąć inicjalizownaie plikiem 
+    def __init__(self, filename = None):
         if filename != None:
-            self.image = cv2.imread(filename, cv2.IMREAD_COLOR)# Robimy w odcieniach szarości bo inaczej wykrywacz świruje
+            self.image = cv2.imread(filename, cv2.IMREAD_COLOR)
         else:
             self.image = None
         
@@ -26,7 +26,7 @@ class Rozpoznawacz:
             endY = self.image.shape[0]
         try:
             roi = self.image[startY:endY, startX:endX] 
-        except TypeError: # TODO polepszyć to
+        except TypeError: 
             print(type(self.image)) 
             return
 
@@ -37,8 +37,7 @@ class Rozpoznawacz:
             mask = cv2.inRange(roi, whiteLower, whiteUpper)
             roi[mask > 0] = (0,0,0)
             roi[mask==0] = (255,255,255)
-            # plt.imshow(roi) # TODO wrzucić resize'a jakiegoś bo inaczej trochę świruje
-            # plt.show()
+
         else:
             roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         
@@ -47,7 +46,7 @@ class Rozpoznawacz:
     #====================================================================
     @staticmethod
     def validCharacters(text):
-        """Sprawdza czy dany znak jest w miarę legalny""" # TODO Dodać lepszy opis
+        """Sprawdza czy znaki odczytane przez silnik Tesseract należą do alfabetu polskiego"""
         polishCharacters = ['ą','ę','ś','ć','ó','ż','ź','ł',' ','!', ',', '.','|','?',':',';']
         res = ""
         for letter in text: 
@@ -65,21 +64,21 @@ class Rozpoznawacz:
     def __recognizeMain(self):
         self.textMain.append(self.__recognize(True,*self.mainTickerCoordinates))
     #====================================================================
-    def __recognizeUnderMain(self): # TODO zmienić tą nazwę na jakąś sensowną
+    def __recognizeUnderMain(self):
         self.textUnderMain.append(self.__recognize(False,*self.underMainTickerCoordinates))
     #====================================================================
     def addFrameToAnalyze(self, image):
-        self.image = image # TODO zmienić być może
+        self.image = image
     #====================================================================
-    def findTicker(self): # Konwencja: najpierw y potem x, ustawiamy gdzie są tickery
-
+    def findTicker(self): 
+        """Znajduje położenie małego tickera i na jego podstawie określa położenie dużego"""
+        # Konwencja zapisu współrzędnych: najpierw y potem x
         def checkIfRectangle(krzywa):
             peri = cv2.arcLength(krzywa,True)
             approx = cv2.approxPolyDP(krzywa,0.05*peri,True)
             (x, y, w, h) = cv2.boundingRect(approx)
 
             if w > TICKERWIDTHLOWERBOUND and h < TICKERWIDTHUPPERBOUND:
-                print(w,h)
                 return True, (x, y, w, h)
             return False, (x, y, w, h)
         #================================================================
@@ -104,8 +103,9 @@ class Rozpoznawacz:
                 UNDERMAINLOWER_Y + rectangle[1] + rectangle[3], UNDERMAINLOWER_X + UNDERMAINSQUARESIZE + rectangle[0],
                 UNDERMAINLOWER_X + UNDERMAINSQUARESIZE + rectangle[0] + rectangle[2])
         else:
-            self.underMainTickerCoordinates = DEFAULTUNDERMAINCOORDINATES # Jeżeli uda się znaleźć pasek PILNE to te wartości zostaną nadpisane, ale 
-            # w przypadku błędu funkcji szukającej paska zostaną użyte te dane
+            self.underMainTickerCoordinates = DEFAULTUNDERMAINCOORDINATES 
+            # Jeżeli uda się znaleźć pasek PILNE to te wartości zostaną nadpisane, ale 
+            # w przypadku błędu funkcji szukającej paska zostaną użyte domyślne dane
         
             self.mainTickerCoordinates = (DEFAULTUNDERMAINCOORDINATES[0] - MAINTICKERHEIGHT, 
                     DEFAULTUNDERMAINCOORDINATES[0], DEFAULTUNDERMAINCOORDINATES[2] - UNDERMAINSQUARESIZE, self.image.shape[1])
