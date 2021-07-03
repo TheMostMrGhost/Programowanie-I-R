@@ -6,6 +6,9 @@ from tkinter import ttk
 import tkinter.font as tkf
 import time
 #====================================================================
+# Nie będę przesadnie komentował poszczególnych elementów kodu zawartych w tym pliku, 
+# bo nie dzieje się tu nic szczególnego, po prostu żmudnie ustawiłem kolejne elementy GUI
+#====================================================================
 def main():
     DEFAULTWIDTH = 100
     LABELTEXTCOLOR = 'gray16'
@@ -13,14 +16,14 @@ def main():
     BUTTONCOLOR = 'forest green'
     films = []
     mode = 1 
-
+    #====================================================================
     root = tk.Tk()
     root.title("Ticker reader")
     root.geometry("1000x200")
     root.configure(bg = LABELBACKGROUND)
     font = tkf.Font(size = 20)
     objectFont = tkf.Font(size = 12)
-
+    #====================================================================
     lblGreetings = tk.Label(root, text = "Witaj w programie do wycinania tickerów.\n"
         + "Podaj linki do filmów z których chcesz wyciąć tickery.", font = font, bg = LABELBACKGROUND, fg = LABELTEXTCOLOR )
     lblModes = tk.Label(root, text = "Wybierz tryb pracy programu.", font = font, bg = LABELBACKGROUND, fg = LABELTEXTCOLOR)
@@ -32,6 +35,7 @@ def main():
     lblAnalyze = tk.Label(root, text = "Trwa przetwarzanie filmów, proszę czekać...", font = font, bg = LABELBACKGROUND, fg = LABELTEXTCOLOR)
     lblAnalyzeFinished = tk.Label(root, text = "Analiza zakończona, możesz zamknąć okno.", font = font, bg = LABELBACKGROUND, fg = LABELTEXTCOLOR)
     lblEnd = tk.Label(root, text = "Przetwarzanie zakończone.\n Program ulegnie samozniszczeniu za:", font = font, bg = LABELBACKGROUND, fg = LABELTEXTCOLOR)
+    #====================================================================
     entNewFilms = tk.Entry(
         root,
         width = int(0.8*DEFAULTWIDTH),
@@ -40,26 +44,26 @@ def main():
         bg = BUTTONCOLOR,
         fg = 'white'
     )
-
+    #===========================================
     progressDown = ttk.Progressbar(
         root,
         orient = 'horizontal',
         length = 3*DEFAULTWIDTH,
         mode = 'determinate'
     )
-
+    #===========================================
     progressAnalyze = ttk.Progressbar(
         root,
         orient = 'horizontal',
         length = 3*DEFAULTWIDTH,
         mode = 'determinate'
     )
-
+    #===========================================
     modeOptions = [
         "Tryb podstawowy: czytanie z głównego tickera.",
         "Tryb rozszerzony: czytanie z tickera głównego i dodatkowego."
     ] 
-    #===========================================
+    #====================================================================
     def addNewFilm():
         temp = entNewFilms.get() 
         if temp != "" and temp != "Link do filmu":
@@ -71,6 +75,7 @@ def main():
         entNewFilms.destroy()
         endAdding.destroy()
         lblGreetings.destroy()
+
         download()
     #===========================================
     def download():
@@ -92,6 +97,7 @@ def main():
         time.sleep(1)
         progressDown.destroy()
         lblDownload.destroy()
+
         showAvailableModes()
     #===========================================
     def downloadBar(file, step = 100):
@@ -116,6 +122,7 @@ def main():
             mode = 1
         if temp == modeOptions[1]:
             mode = 2
+
         analyze(mode)
     #===========================================
     def analyze(mode):
@@ -141,11 +148,13 @@ def main():
         time.sleep(1)
         progressAnalyze.destroy()
         lblAnalyze.destroy()
+
         cleaningStage()
     #===========================================
     def analyzeBar(file, mode, step = 100):
         file.analyzeLive(mode)
         progressAnalyze['value'] += step
+        root.update()
     #===========================================
     def cleaningStage():
         lblClean.pack()
@@ -167,11 +176,13 @@ def main():
         lblEnd.pack()
         lblCount.pack()
         root.update()
-        while ii > 0:        
+
+        while ii > 0:
             time.sleep(1)
             ii-=1
             tempText.set(str(ii))
             root.update()
+        
         root.destroy()
     #===========================================
     lblGreetings.pack()
@@ -220,7 +231,8 @@ def main():
         font = objectFont,
         bg = BUTTONCOLOR,
         fg = 'white'
-    ) 
+    )
+
     front = tk.StringVar(root)
     front.set(modeOptions[0])
     modeChoice = tk.OptionMenu(
@@ -228,6 +240,7 @@ def main():
         front,
         *modeOptions
     )
+
     endAdding.pack(side = tk.RIGHT)
     addFilm.pack(side = tk.RIGHT)
 
